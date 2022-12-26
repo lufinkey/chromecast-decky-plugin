@@ -1,4 +1,12 @@
+
+import pathlib
+import subprocess
+import asyncio
+import os
 import logging
+
+HOME_DIR = str(pathlib.Path(os.getcwd()).parent.parent.resolve())
+PARENT_DIR = str(pathlib.Path(__file__).parent.resolve())
 
 logging.basicConfig(filename="/tmp/template.log",
                     format='[Template] %(asctime)s %(levelname)s %(message)s',
@@ -8,15 +16,17 @@ logger=logging.getLogger()
 logger.setLevel(logging.INFO) # can be changed to logging.DEBUG for debugging issues
 
 class Plugin:
-    # A normal method. It can be called from JavaScript using call_plugin_function("method_1", argument1, argument2)
-    async def add(self, left, right):
-        return left + right
-
+    backend_proc = None
+    
     # Asyncio-compatible long-running code, executed in a task when the plugin is loaded
     async def _main(self):
-        logger.info("Hello World!")
+        # startup
+        logger.info("Initializing Chromecast Plugin")
+        self.backend_proc = subprocess.Popen([PARENT_DIR + "/bin/backend"])
+        while True:
+            await asyncio.sleep(1)
     
     # Function called first during the unload process, utilize this to handle your plugin being removed
     async def _unload(self):
-        logger.info("Goodbye World!")
+        logger.info("Unloading Chromecast Plugin")
         pass
