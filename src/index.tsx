@@ -16,6 +16,8 @@ import { FaShip } from "react-icons/fa";
 
 import logo from "../assets/logo.png";
 
+const PLUGIN_ROUTE: string = "/chromecast-plugin";
+
 // interface AddMethodArgs {
 //   left: number;
 //   right: number;
@@ -68,7 +70,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           layout="below"
           onClick={() => {
             Router.CloseSideMenus();
-            Router.Navigate("/decky-plugin-test");
+            Router.Navigate(PLUGIN_ROUTE);
           }}
         >
           Router
@@ -90,7 +92,7 @@ const DeckyPluginRouterTest: VFC = () => {
 };
 
 export default definePlugin((serverApi: ServerAPI) => {
-  serverApi.routerHook.addRoute("/decky-plugin-test", DeckyPluginRouterTest, {
+  serverApi.routerHook.addRoute(PLUGIN_ROUTE, DeckyPluginRouterTest, {
     exact: true,
   });
 
@@ -99,7 +101,7 @@ export default definePlugin((serverApi: ServerAPI) => {
     content: <Content serverAPI={serverApi} />,
     icon: <FaShip />,
     onDismount() {
-      serverApi.routerHook.removeRoute("/decky-plugin-test");
+      serverApi.routerHook.removeRoute(PLUGIN_ROUTE);
     },
   };
 });
