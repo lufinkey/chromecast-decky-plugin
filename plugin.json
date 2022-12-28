@@ -1,10 +1,10 @@
 {
-  "name": "Chromecast",
-  "author": "Luis Finke",
-  "flags": ["debug", "_root"],
-  "publish": {
-    "tags": ["chromecast", "cast", "screen", "mirror"],
-    "description": "Cast your screen to a chromecast receiver",
-    "image": "https://opengraph.githubassets.com/1/SteamDeckHomebrew/PluginLoader"
-  }
+	"name": "Chromecast",
+	"author": "Luis Finke",
+	"flags": [],
+	"publish": {
+		"tags": ["chromecast", "cast", "screen", "mirror"],
+		"description": "Cast your screen to a chromecast receiver",
+		"image": "https://opengraph.githubassets.com/1/SteamDeckHomebrew/PluginLoader"
+	}
 }
