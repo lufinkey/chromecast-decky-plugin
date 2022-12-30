@@ -6,7 +6,7 @@ all: backend
 # This rule tells make how to build backend from main.c
 backend:
 	mkdir -p ./out
-	gcc -o ./out/backend ./src/main.c 
+	gcc -o ./out/backend ./native/main.c 
 
 # This rule tells make to delete backend and backend.o
 .PHONY: clean 

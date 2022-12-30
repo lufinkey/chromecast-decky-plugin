@@ -21,6 +21,7 @@ coverage
 
 # Dependency directory
 node_modules
+py_modules
 bower_components
 
 # Editors

@@ -1,0 +1,2 @@
+pychromecast>=13.0.4
+flask>=2.2.2
