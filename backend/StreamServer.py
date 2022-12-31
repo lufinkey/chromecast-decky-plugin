@@ -4,7 +4,6 @@ import shutil
 import tempfile
 import logging
 import multiprocessing
-import ffmpeg
 from flask import Flask, Response, send_from_directory
 
 logger = logging.getLogger()
@@ -29,7 +28,11 @@ def stream():
 		ffmpeg_proc.kill()
 		ffmpeg_proc = None
 	ffmpeg_proc = subprocess.Popen(
-		["ffmpeg", "-f", "x11grab", "-s", "1920x1200", "-i", ":0.0", "-vcodec", "libx264", "-preset", "ultrafast", "-tune", "zerolatency", "-maxrate", "10000k", "-bufsize", "20000k", "-pix_fmt", "yuv420p", "-g", "60", "-flush_packets", "1", "-f", "mp4", "-max_muxing_queue_size", "9999", "-movflags", "frag_keyframe+empty_moov", "pipe:1"],
+		[ "ffmpeg", "-f", "x11grab", "-s", "1920x1200", "-i", ":0.0",
+			"-vcodec", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
+			"-maxrate", "10000k", "-bufsize", "20000k", "-pix_fmt", "yuv420p", "-g", "60",
+			"-flush_packets", "1", "-f", "mp4", "-max_muxing_queue_size", "9999", "-movflags", "frag_keyframe+empty_moov",
+			"pipe:1"],
 		stdout=subprocess.PIPE)
 	return Response(ffmpeg_proc.stdout, mimetype="video/mp4")
 
@@ -39,7 +42,7 @@ def stream():
 
 server_process: multiprocessing.Process = None
 
-def start(host: str, port: int):
+def start(host: str = "0.0.0.0", port: int = 8069):
 	global server_process
 	global ffmpeg_proc
 	# ensure server isn't already started

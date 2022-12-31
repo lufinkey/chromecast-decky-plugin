@@ -24,8 +24,6 @@ time.sleep(1)
 mc = cast.media_controller
 mc.play_media('http://192.168.1.105:8069/live', content_type="video/mp4", stream_type="LIVE")
 mc.block_until_active()
-time.sleep(5)
-mc.play()
 print(mc.status)
 #'''
 
