@@ -14,10 +14,13 @@ interface State {
 
 export class CastDeviceList extends Component<Props, State> {
 	mounted: boolean = false
-	pollPromise: Promise<void> | null = null
+	refreshPromise: Promise<void> | null = null
 
 	constructor(props: Props) {
 		super(props)
+		this.mounted = false;
+		this.refreshPromise = null;
+		
 		this.state = {
 			devices: [],
 			castingDevice: null,
@@ -32,47 +35,14 @@ export class CastDeviceList extends Component<Props, State> {
 			await this.props.backend.startCastDiscovery();
 		} catch(error) {
 			console.error(error);
-			if(!this.mounted) {
-				return;
-			}
-			this.setState({ error });
-			try {
-				await this.refreshCastDevices();
-			} catch(error) {
-				console.error(error);
-				if(this.mounted) {
-					this.setState({ error });
-				}
-			}
-			if(!this.mounted) {
-				return;
-			}
-			try {
-				await this.refreshCurrentCastDevice();
-			} catch(error) {
-				console.error(error);
-				if(this.mounted) {
-					this.setState({ error });
-				}
-			}
+			this.refreshCastInfo();
 			return;
 		}
-		this.pollPromise = this.pollForUpdates();
+		this.pollForUpdates();
 	}
 
 	async componentWillUnmount() {
 		this.mounted = false;
-		if(this.pollPromise != null) {
-			try {
-				await this.pollPromise;
-			} catch(error) {
-				console.error(error);
-				if(this.mounted) {
-					this.setState({ error });
-				}
-			}
-			this.pollPromise = null;
-		}
 		console.log("stopping cast device discovery");
 		try {
 			this.props.backend.stopCastDiscovery();
@@ -96,10 +66,15 @@ export class CastDeviceList extends Component<Props, State> {
 			castingDevice: device
 		});
 	}
-	
-	async pollForUpdates() {
-		console.log("starting poll for chromecast updates")
-		while(this.mounted) {
+
+	async refreshCastInfo() {
+		if(this.refreshPromise != null) {
+			return await this.refreshPromise;
+		}
+		this.refreshPromise = (async () => {
+			if(!this.mounted) {
+				return;
+			}
 			try {
 				await this.refreshCastDevices();
 			} catch(error) {
@@ -109,7 +84,7 @@ export class CastDeviceList extends Component<Props, State> {
 				}
 			}
 			if(!this.mounted) {
-				break;
+				return;
 			}
 			try {
 				await this.refreshCurrentCastDevice();
@@ -119,6 +94,21 @@ export class CastDeviceList extends Component<Props, State> {
 					this.setState({ error });
 				}
 			}
+			if(!this.mounted) {
+				return;
+			}
+		})();
+		try {
+			await this.refreshPromise;
+		} finally {
+			this.refreshPromise = null;
+		}
+	}
+	
+	async pollForUpdates() {
+		console.log("starting poll for chromecast updates")
+		while(this.mounted) {
+			await this.refreshCastInfo();
 			if(!this.mounted) {
 				break;
 			}
