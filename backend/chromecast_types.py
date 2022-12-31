@@ -1,5 +1,6 @@
 from typing import List
 from pychromecast import CastInfo, ServiceInfo
+from uuid import UUID
 
 
 def serviceinfo_todict(service_info: ServiceInfo):
@@ -19,7 +20,7 @@ def castinfo_todict(cast_info: CastInfo):
 		services.append(serviceinfo_todict(service))
 	return {
 		"services": services,
-		"uuid": cast_info.uuid,
+		"uuid": str(cast_info.uuid),
 		"model_name": cast_info.model_name,
 		"friendly_name": cast_info.friendly_name,
 		"host": cast_info.host,
@@ -34,7 +35,7 @@ def castinfo_fromdict(d: dict):
 		services.add(serviceinfo_fromdict(service))
 	return CastInfo(
 		services,
-		d["uuid"],
+		UUID(d["uuid"]),
 		d["model_name"],
 		d["friendly_name"],
 		d["host"],
