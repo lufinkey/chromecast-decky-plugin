@@ -2,10 +2,18 @@ import {
 	ServerAPI,
 } from "decky-frontend-lib";
 
+export interface CastDeviceService {
+	type: string;
+	data: string;
+}
+
 export interface CastDevice {
+	services: [CastDeviceService] | null;
 	uuid: string;
-	friendly_name: string;
 	model_name: string;
+	friendly_name: string;
+	host: string;
+	port: number;
 	cast_type: string;
 	manufacturer: string;
 }

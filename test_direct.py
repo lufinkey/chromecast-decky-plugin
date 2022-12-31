@@ -1,7 +1,7 @@
 
 import time
 import pychromecast
-import StreamServer
+import streamserver
 
 # List chromecasts on the network, but don't connect
 services, browser = pychromecast.discovery.discover_chromecasts()
@@ -16,7 +16,7 @@ cast = chromecasts[0]
 cast.wait()
 cast.quit_app()
 
-StreamServer.start(host="0.0.0.0", port=8069)
+streamserver.start(host="0.0.0.0", port=8069)
 
 time.sleep(1)
 

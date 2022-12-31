@@ -4,7 +4,7 @@ import shutil
 import tempfile
 import logging
 import multiprocessing
-from flask import Flask, Response, send_from_directory
+from flask import Flask, Response
 
 logger = logging.getLogger()
 

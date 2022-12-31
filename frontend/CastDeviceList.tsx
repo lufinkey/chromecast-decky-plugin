@@ -8,7 +8,8 @@ interface Props {
 
 interface State {
 	devices: Array<CastDevice>,
-	castingDevice: CastDevice | null
+	castingDevice: CastDevice | null,
+	error: any
 }
 
 export class CastDeviceList extends Component<Props, State> {
@@ -19,12 +20,14 @@ export class CastDeviceList extends Component<Props, State> {
 		super(props)
 		this.state = {
 			devices: [],
-			castingDevice: null
+			castingDevice: null,
+			error: null
 		};
 	}
 
 	async componentDidMount() {
 		this.mounted = true;
+		console.log("starting cast device discovery");
 		try {
 			await this.props.backend.startCastDiscovery();
 		} catch(error) {
@@ -32,10 +35,14 @@ export class CastDeviceList extends Component<Props, State> {
 			if(!this.mounted) {
 				return;
 			}
+			this.setState({ error });
 			try {
 				await this.refreshCastDevices();
 			} catch(error) {
 				console.error(error);
+				if(this.mounted) {
+					this.setState({ error });
+				}
 			}
 			if(!this.mounted) {
 				return;
@@ -44,6 +51,9 @@ export class CastDeviceList extends Component<Props, State> {
 				await this.refreshCurrentCastDevice();
 			} catch(error) {
 				console.error(error);
+				if(this.mounted) {
+					this.setState({ error });
+				}
 			}
 			return;
 		}
@@ -57,9 +67,13 @@ export class CastDeviceList extends Component<Props, State> {
 				await this.pollPromise;
 			} catch(error) {
 				console.error(error);
+				if(this.mounted) {
+					this.setState({ error });
+				}
 			}
 			this.pollPromise = null;
 		}
+		console.log("stopping cast device discovery");
 		try {
 			this.props.backend.stopCastDiscovery();
 		} catch(error) {
@@ -68,6 +82,7 @@ export class CastDeviceList extends Component<Props, State> {
 	}
 
 	async refreshCastDevices() {
+		console.log("refreshing cast devices");
 		const devices = await this.props.backend.getCastDevices();
 		this.setState({
 			devices: devices ?? []
@@ -75,18 +90,23 @@ export class CastDeviceList extends Component<Props, State> {
 	}
 
 	async refreshCurrentCastDevice() {
+		console.log("refreshing current cast device");
 		const device = await this.props.backend.getCastingDevice();
 		this.setState({
 			castingDevice: device
 		});
 	}
-
+	
 	async pollForUpdates() {
+		console.log("starting poll for chromecast updates")
 		while(this.mounted) {
 			try {
 				await this.refreshCastDevices();
 			} catch(error) {
 				console.error(error);
+				if(this.mounted) {
+					this.setState({ error });
+				}
 			}
 			if(!this.mounted) {
 				break;
@@ -95,23 +115,32 @@ export class CastDeviceList extends Component<Props, State> {
 				await this.refreshCurrentCastDevice();
 			} catch(error) {
 				console.error(error);
+				if(this.mounted) {
+					this.setState({ error });
+				}
 			}
 			if(!this.mounted) {
 				break;
 			}
 			await new Promise((resolve, _) => setTimeout(resolve, 1000));
 		}
+		console.log("stopping poll for chromecast updates");
 	}
 
 	render() {
 		return (
-			<PanelSection title="Cast Devices">
-				{this.state.devices.map((device) => (
-					<PanelSectionRow>
-						{device.friendly_name}
-					</PanelSectionRow>
-				))}
-			</PanelSection>
+			<div>
+				{this.state.error != null ?
+					<div>{this.state.error.message}</div>
+				: null}
+				<PanelSection title={`Cast Devices (${this.state.devices.length})`}>
+					{this.state.devices.map((device) => (
+						<PanelSectionRow>
+							{device.friendly_name}
+						</PanelSectionRow>
+					))}
+				</PanelSection>
+			</div>
 		);
 	}
 }

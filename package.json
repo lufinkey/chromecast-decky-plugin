@@ -3,11 +3,11 @@
 	"version": "0.0.1",
 	"description": "Cast your steam deck screen to a chromecast receiver",
 	"scripts": {
-		"prepare": "if [ -f requirements.txt ]; then\n\tpip install -U -r requirements.txt -t py_modules\nfi",
+		"prepare": "if [ -f requirements.txt ]; then\n\tpip3 install -U -r requirements.txt -t py_modules\nfi",
 		"build": "shx rm -rf dist && rollup -c",
 		"watch": "rollup -c -w",
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"test_py": "export PYTHONPATH=\"$PWD/py_modules\"; python3 backend/test.py"
+		"test_backend": "export PYTHONPATH=\"$PWD/py_modules\"; python3 test.py"
 	},
 	"repository": {
 		"type": "git",
