@@ -2,49 +2,42 @@ from typing import List
 from pychromecast import CastInfo, ServiceInfo
 
 
-class CastDeviceService:
-	type: str
-	data: str
+def serviceinfo_todict(service_info: ServiceInfo):
+	return {
+		"type": service_info.type,
+		"data": service_info.data
+	}
 
-	def __init__(self, service_info: ServiceInfo):
-		self.type = service_info.type
-		self.data = service_info.data
-	
-	def to_namedtuple(self) -> ServiceInfo:
-		return ServiceInfo(self.type, self.data)
+def serviceinfo_fromdict(d: dict):
+	return ServiceInfo(
+		d["type"],
+		d["data"])
 
-class CastDevice:
-	services: List[CastDeviceService]
-	uuid: str
-	model_name: str
-	friendly_name: str
-	host: str
-	port: int
-	cast_type: str
-	manufacturer: str
+def castinfo_todict(cast_info: CastInfo):
+	services = list()
+	for service in cast_info.services:
+		services.append(serviceinfo_todict(service))
+	return {
+		"services": services,
+		"uuid": cast_info.uuid,
+		"model_name": cast_info.model_name,
+		"friendly_name": cast_info.friendly_name,
+		"host": cast_info.host,
+		"port": cast_info.port,
+		"cast_type": cast_info.cast_type,
+		"manufacturer": cast_info.manufacturer
+	}
 
-	def __init__(self, cast_info: CastInfo):
-		self.services = [];
-		for service_info in cast_info.services:
-			self.services.append(CastDeviceService(service_info))
-		self.uuid = cast_info.uuid
-		self.model_name = cast_info.model_name
-		self.friendly_name = cast_info.friendly_name
-		self.host = cast_info.host
-		self.port = cast_info.port
-		self.cast_type = cast_info.cast_type
-		self.manufacturer = cast_info.manufacturer
-	
-	def to_namedtuple(self) -> CastInfo:
-		services_set=set()
-		for service in self.services:
-			services_set.add(service.to_namedtuple())
-		return CastInfo(
-			services_set,
-			self.uuid,
-			self.model_name,
-			self.friendly_name,
-			self.host,
-			self.port,
-			self.cast_type,
-			self.manufacturer)
+def castinfo_fromdict(d: dict):
+	services = set()
+	for service in d["services"]:
+		services.add(serviceinfo_fromdict(service)):
+	return CastInfo(
+		services,
+		d["uuid"],
+		d["model_name"],
+		d["friendly_name"],
+		d["host"],
+		d["port"],
+		d["cast_type"],
+		d["manufacturer"])

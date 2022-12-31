@@ -8,10 +8,10 @@ import logging
 import zeroconf
 import socket
 import pychromecast
-from pychromecast import CastBrowser, SimpleCastListener
+from pychromecast import CastBrowser, CastInfo, SimpleCastListener
 
 import streamserver
-from chromecast_types import CastDevice
+from chromecast_types import castinfo_fromdict, castinfo_todict
 
 # get plugin directory
 PLUGIN_DIR = str(pathlib.Path(__file__).parent.resolve())
@@ -59,13 +59,13 @@ class Plugin:
 		logger.info("done starting cast discovery")
 	
 	# get all the currently discovered cast devices
-	async def get_cast_devices(self) -> List[CastDevice]:
+	async def get_cast_devices(self) -> list:
 		logger.info("getting cast devices")
 		if self.chromecast_browser is None:
 			return None
-		devices: List[CastDevice] = []
+		devices = []
 		for cast_info in self.chromecast_browser.devices.values():
-			devices.append(CastDevice(cast_info))
+			devices.append(castinfo_todict(cast_info))
 		logger.info("got {count} cast devices".format(count=len(devices)))
 		return devices
 	
@@ -87,7 +87,8 @@ class Plugin:
 			port = self.port)
 	
 	# start casting the desktop stream to the given chromecast
-	async def start_casting(self, device: CastDevice, timeout=pychromecast.DISCOVER_TIMEOUT):
+	async def start_casting(self, device: dict, timeout=pychromecast.DISCOVER_TIMEOUT):
+		device: CastInfo = castinfo_fromdict(device)
 		# check if already connected to chromecast
 		if self.chromecast is not None:
 			if self.chromecast.uuid == device.uuid:
@@ -113,10 +114,10 @@ class Plugin:
 		mc.block_until_active()
 
 	# get the device that is currently being casted to
-	async def get_casting_device(self) -> CastDevice:
+	async def get_casting_device(self) -> dict:
 		if self.chromecast is None:
 			return None
-		return CastDevice(self.chromecast.cast_info)
+		return castinfo_todict(self.chromecast.cast_info)
 	
 	# stop casting to the currently connected device
 	async def stop_casting(self):
