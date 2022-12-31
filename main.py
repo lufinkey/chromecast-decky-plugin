@@ -46,7 +46,7 @@ class Plugin:
 	
 	
 	# start searching for cast devices
-	def start_cast_discovery(self):
+	async def start_cast_discovery(self):
 		logger.info("starting cast discovery")
 		if self.chromecast_browser is None:
 			zconf = zeroconf.Zeroconf()
@@ -58,7 +58,7 @@ class Plugin:
 		logger.info("done starting cast discovery")
 	
 	# get all the currently discovered cast devices
-	def get_cast_devices(self) -> list:
+	async def get_cast_devices(self) -> list:
 		logger.info("getting cast devices")
 		if self.chromecast_browser is None:
 			return None
@@ -69,7 +69,7 @@ class Plugin:
 		return devices
 	
 	# stop searching for cast devices
-	def stop_cast_discovery(self):
+	async def stop_cast_discovery(self):
 		logger.info("stopping cast discovery")
 		if self.chromecast_browser is None:
 			return
@@ -79,14 +79,14 @@ class Plugin:
 	
 
 	# get the URL of the desktop stream
-	def get_stream_url(self):
+	async def get_stream_url(self):
 		local_ip = socket.gethostbyname(socket.gethostname())
 		return 'http://{local_ip}:{port}/live'.format(
 			local_ip = local_ip,
 			port = self.port)
 	
 	# start casting the desktop stream to the given chromecast
-	def start_casting(self, device: dict, timeout=pychromecast.DISCOVER_TIMEOUT):
+	async def start_casting(self, device: dict, timeout=pychromecast.DISCOVER_TIMEOUT):
 		device: CastInfo = castinfo_fromdict(device)
 		# check if already connected to chromecast
 		if self.chromecast is not None:
@@ -95,7 +95,7 @@ class Plugin:
 				self.chromecast.connect()
 			else:
 				# disconnect from old chromecast
-				self.stop_casting()
+				await self.stop_casting()
 		# get chromecast if needed
 		if self.chromecast is None:
 			self.chromecast = pychromecast.get_chromecast_from_cast_info(
@@ -113,13 +113,13 @@ class Plugin:
 		mc.block_until_active()
 
 	# get the device that is currently being casted to
-	def get_casting_device(self) -> dict:
+	async def get_casting_device(self) -> dict:
 		if self.chromecast is None:
 			return None
 		return castinfo_todict(self.chromecast.cast_info)
 	
 	# stop casting to the currently connected device
-	def stop_casting(self):
+	async def stop_casting(self):
 		if self.chromecast is None:
 			return
 		mc = self.chromecast.media_controller
