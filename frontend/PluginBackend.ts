@@ -2,12 +2,56 @@ import {
 	ServerAPI,
 } from "decky-frontend-lib";
 
-export class PluginBackend {
-    api: ServerAPI;
-    
-    constructor(api: ServerAPI) {
-        this.api = api;
-    }
+export interface CastDevice {
+	uuid: string;
+	friendly_name: string;
+	model_name: string;
+	cast_type: string;
+	manufacturer: string;
+}
 
-    
+
+
+export class PluginBackend {
+	api: ServerAPI;
+	
+	constructor(api: ServerAPI) {
+		this.api = api;
+	}
+
+	async callPluginMethod<TRes = {}, TArgs = {}>(method: string, args: TArgs): Promise<TRes> {
+		const res = await this.api.callPluginMethod<TArgs,TRes>(method, args);
+		if(!res.success) {
+			throw new Error("Couldn't resolve result for "+method)
+		}
+		return res.result;
+	}
+
+
+
+	async startCastDiscovery() {
+		return await this.callPluginMethod<void>("start_cast_discovery", {})
+	}
+
+	async getCastDevices(): Promise<[CastDevice]> {
+		return await this.callPluginMethod<[CastDevice]>("get_cast_devices", {});
+	}
+
+	async stopCastDiscovery() {
+		return await this.callPluginMethod<void>("stop_cast_discovery", {});
+	}
+
+
+
+	async startCasting(device: CastDevice) {
+		return await this.callPluginMethod("start_casting", { device });
+	}
+
+	async getCastingUUID(): Promise<string> {
+		return await this.callPluginMethod<string>("get_casting_uuid", {});
+	}
+
+	async stopCasting() {
+		return await this.callPluginMethod("stop_casting", {});
+	}
 }

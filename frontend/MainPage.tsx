@@ -1,15 +1,13 @@
 import {
-	PanelSection,
-	PanelSectionRow,
 	ServerAPI,
-} from "decky-frontend-lib";
-import { VFC } from "react";
+} from 'decky-frontend-lib';
+import { VFC } from 'react';
+import { PluginBackend } from './PluginBackend';
+import { CastDeviceList } from './CastDeviceList';
 
-export const MainPage: VFC<{ serverAPI: ServerAPI }> = ({}) => {
+export const MainPage: VFC<{ serverAPI: ServerAPI }> = ({ serverAPI }) => {
+	const backend = new PluginBackend(serverAPI);
 	return (
-		<PanelSection title="Panel Section">
-			<PanelSectionRow>
-			</PanelSectionRow>
-		</PanelSection>
+		<CastDeviceList backend={backend}/>
 	);
 };
