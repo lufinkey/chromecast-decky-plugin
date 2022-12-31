@@ -1,15 +1,15 @@
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.realpath(__file__))+"/py_modules")
-from typing import List
+PLUGIN_DIR = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(PLUGIN_DIR+"/py_modules")
 import pathlib
-import asyncio
 import logging
 import zeroconf
 import socket
 import pychromecast
 from pychromecast import CastBrowser, CastInfo, SimpleCastListener
 
+sys.path.append(PLUGIN_DIR+"/backend")
 import streamserver
 from chromecast_types import castinfo_fromdict, castinfo_todict
 
@@ -22,6 +22,7 @@ logging.basicConfig(filename="/tmp/chromecast-decky.log",
                     force=True)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO) # can be changed to logging.DEBUG for debugging issues
+logger.info("Loading Chromecast Plugin")
 
 
 
@@ -36,8 +37,6 @@ class Plugin:
 	async def _main(self):
 		# startup
 		logger.info("Initializing Chromecast Plugin")
-		while True:
-			await asyncio.sleep(1)
 	
 	# Function called first during the unload process, utilize this to handle your plugin being removed
 	async def _unload(self):

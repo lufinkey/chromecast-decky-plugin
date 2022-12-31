@@ -31,7 +31,7 @@ def castinfo_todict(cast_info: CastInfo):
 def castinfo_fromdict(d: dict):
 	services = set()
 	for service in d["services"]:
-		services.add(serviceinfo_fromdict(service)):
+		services.add(serviceinfo_fromdict(service))
 	return CastInfo(
 		services,
 		d["uuid"],
