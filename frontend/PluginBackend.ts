@@ -33,7 +33,7 @@ export class PluginBackend {
 		return await this.callPluginMethod<void>("start_cast_discovery", {})
 	}
 
-	async getCastDevices(): Promise<[CastDevice]> {
+	async getCastDevices(): Promise<[CastDevice] | null> {
 		return await this.callPluginMethod<[CastDevice]>("get_cast_devices", {});
 	}
 
@@ -47,10 +47,10 @@ export class PluginBackend {
 		return await this.callPluginMethod("start_casting", { device });
 	}
 
-	async getCastingUUID(): Promise<string> {
-		return await this.callPluginMethod<string>("get_casting_uuid", {});
+	async getCastingDevice(): Promise<CastDevice | null> {
+		return await this.callPluginMethod<CastDevice>("get_casting_device", {});
 	}
-
+	
 	async stopCasting() {
 		return await this.callPluginMethod("stop_casting", {});
 	}

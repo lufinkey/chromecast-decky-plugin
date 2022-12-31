@@ -8,7 +8,7 @@ interface Props {
 
 interface State {
 	devices: Array<CastDevice>,
-	castingUUID: string | null
+	castingDevice: CastDevice | null
 }
 
 export class CastDeviceList extends Component<Props, State> {
@@ -19,7 +19,7 @@ export class CastDeviceList extends Component<Props, State> {
 		super(props)
 		this.state = {
 			devices: [],
-			castingUUID: null
+			castingDevice: null
 		};
 	}
 
@@ -70,14 +70,14 @@ export class CastDeviceList extends Component<Props, State> {
 	async refreshCastDevices() {
 		const devices = await this.props.backend.getCastDevices();
 		this.setState({
-			devices
+			devices: devices ?? []
 		});
 	}
 
 	async refreshCurrentCastDevice() {
-		const uuid = await this.props.backend.getCastingUUID();
+		const device = await this.props.backend.getCastingDevice();
 		this.setState({
-			castingUUID: uuid
+			castingDevice: device
 		});
 	}
 

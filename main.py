@@ -85,10 +85,10 @@ class Plugin:
 		mc.play_media(stream_url, content_type="video/mp4", stream_type="LIVE")
 		mc.block_until_active()
 	
-	async def get_casting_uuid(self):
+	async def get_casting_device(self):
 		if self.chromecast is None:
 			return None
-		return self.chromecast.uuid
+		return self.chromecast.cast_info
 	
 	async def stop_casting(self):
 		if self.chromecast is None:
