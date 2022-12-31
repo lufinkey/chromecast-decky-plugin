@@ -46,7 +46,7 @@ class Plugin:
 	
 	
 	# start searching for cast devices
-	async def start_cast_discovery(self):
+	def start_cast_discovery(self):
 		logger.info("starting cast discovery")
 		if self.chromecast_browser is None:
 			zconf = zeroconf.Zeroconf()
@@ -58,7 +58,7 @@ class Plugin:
 		logger.info("done starting cast discovery")
 	
 	# get all the currently discovered cast devices
-	async def get_cast_devices(self) -> list:
+	def get_cast_devices(self) -> list:
 		logger.info("getting cast devices")
 		if self.chromecast_browser is None:
 			return None
@@ -69,7 +69,7 @@ class Plugin:
 		return devices
 	
 	# stop searching for cast devices
-	async def stop_cast_discovery(self):
+	def stop_cast_discovery(self):
 		logger.info("stopping cast discovery")
 		if self.chromecast_browser is None:
 			return
@@ -86,7 +86,7 @@ class Plugin:
 			port = self.port)
 	
 	# start casting the desktop stream to the given chromecast
-	async def start_casting(self, device: dict, timeout=pychromecast.DISCOVER_TIMEOUT):
+	def start_casting(self, device: dict, timeout=pychromecast.DISCOVER_TIMEOUT):
 		device: CastInfo = castinfo_fromdict(device)
 		# check if already connected to chromecast
 		if self.chromecast is not None:
@@ -95,7 +95,7 @@ class Plugin:
 				self.chromecast.connect()
 			else:
 				# disconnect from old chromecast
-				await self.stop_casting()
+				self.stop_casting()
 		# get chromecast if needed
 		if self.chromecast is None:
 			self.chromecast = pychromecast.get_chromecast_from_cast_info(
@@ -113,13 +113,13 @@ class Plugin:
 		mc.block_until_active()
 
 	# get the device that is currently being casted to
-	async def get_casting_device(self) -> dict:
+	def get_casting_device(self) -> dict:
 		if self.chromecast is None:
 			return None
 		return castinfo_todict(self.chromecast.cast_info)
 	
 	# stop casting to the currently connected device
-	async def stop_casting(self):
+	def stop_casting(self):
 		if self.chromecast is None:
 			return
 		mc = self.chromecast.media_controller

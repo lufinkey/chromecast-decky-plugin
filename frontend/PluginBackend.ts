@@ -30,12 +30,12 @@ export class PluginBackend {
 	async callPluginMethod<TRes = {}, TArgs = {}>(method: string, args: TArgs): Promise<TRes> {
 		const res = await this.api.callPluginMethod<TArgs,TRes>(method, args);
 		if(!res.success) {
-			throw new Error("Couldn't resolve result for "+method)
+			throw new Error(`Method ${method} failed`);
 		}
 		return res.result;
 	}
 
-
+	
 
 	async startCastDiscovery() {
 		return await this.callPluginMethod<void>("start_cast_discovery", {})
