@@ -48,14 +48,14 @@ class Plugin:
 	# start searching for cast devices
 	async def start_cast_discovery(self):
 		logger.info("starting cast discovery")
-		if self.chromecast_browser is not None:
-			await self.stop_cast_discovery()
-			self.chromecast_browser = None
-		zconf = zeroconf.Zeroconf()
-		self.chromecast_browser = CastBrowser(
-			SimpleCastListener(),
-			zeroconf_instance=zconf,
-			known_hosts=None)
+		if self.chromecast_browser is None:
+			#await self.stop_cast_discovery()
+			#self.chromecast_browser = None
+			zconf = zeroconf.Zeroconf()
+			self.chromecast_browser = CastBrowser(
+				SimpleCastListener(),
+				zeroconf_instance=zconf,
+				known_hosts=None)
 		self.chromecast_browser.start_discovery()
 		logger.info("done starting cast discovery")
 	
@@ -73,9 +73,9 @@ class Plugin:
 	# stop searching for cast devices
 	async def stop_cast_discovery(self):
 		logger.info("stopping cast discovery")
-		if self.chromecast_browser is None:
-			return
-		self.chromecast_browser.stop_discovery()
+		if self.chromecast_browser is not None:
+			self.chromecast_browser.stop_discovery()
+			self.chromecast_browser = None
 		logger.info("done stopping cast discovery")
 	
 	
