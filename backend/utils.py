@@ -1,4 +1,6 @@
-from typing import List
+import os
+from typing import List, Tuple
+import subprocess
 import asyncio
 
 from pychromecast import CastInfo, ServiceInfo
@@ -44,3 +46,10 @@ def castinfo_fromdict(d: dict):
 		d["port"],
 		d["cast_type"],
 		d["manufacturer"])
+
+def get_screen_resolution(display: str = ":0") -> Tuple[int, int]:
+	output = os.popen("export DISPLAY=\""+display+"\"; xdpyinfo | awk '/dimensions/{print $2}'").read()
+	dimensions = output.split('x')
+	if len(dimensions) != 2:
+		raise RuntimeError("Couldn't determine screen resolution from output "+output)
+	return (int(dimensions[0].strip()), int(dimensions[1].strip()))
