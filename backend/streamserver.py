@@ -38,7 +38,7 @@ def stream():
 			"-maxrate", "10000k", "-bufsize", "20000k", "-pix_fmt", "yuv420p", "-g", "60",
 			"-f", "mp4", "-max_muxing_queue_size", "9999", "-movflags", "frag_keyframe+empty_moov",
 			"pipe:1"],
-		env={"DISPLAY": ":0"},
+		#env={"DISPLAY": ":0"},
 		stdout=subprocess.PIPE)
 	return Response(ffmpeg_proc.stdout, mimetype="video/mp4")
 
