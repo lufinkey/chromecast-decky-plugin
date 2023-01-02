@@ -154,9 +154,6 @@ export class CastDeviceList extends Component<Props, State> {
 		}
 		return (
 			<div>
-				{state.error != null ?
-					<div>{state.error.message}</div>
-				: null}
 				<PanelSection title={`Cast Devices (${devices.length})`}>
 					{devices.map((device) => (
 						(castingDevice != null && castingDevice.uuid == device.uuid) ? (
@@ -175,6 +172,9 @@ export class CastDeviceList extends Component<Props, State> {
 							</ButtonItem>
 						)
 					))}
+					{state.error != null ?
+						<div>{state.error.message}</div>
+					: null}
 				</PanelSection>
 			</div>
 		);

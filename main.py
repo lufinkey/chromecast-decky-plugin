@@ -15,7 +15,7 @@ from pychromecast import CastBrowser, CastInfo, SimpleCastListener
 
 sys.path.append(PLUGIN_DIR+"/backend")
 import streamserver
-from utils import castinfo_fromdict, castinfo_todict, get_screen_resolution
+from utils import castinfo_fromdict, castinfo_todict, get_display_resolution
 
 # get plugin directory
 PLUGIN_DIR = str(pathlib.Path(__file__).parent.resolve())
@@ -29,7 +29,14 @@ logger.setLevel(logging.INFO) # can be changed to logging.DEBUG for debugging is
 logger.info("Loading Chromecast Plugin")
 
 
+# get display and port
+display: str = os.getenv("DISPLAY")
+if display is None:
+	display = ":1"
 port: int = 8069
+
+
+
 # get the URL of the desktop stream
 def get_stream_url():
 	global port
@@ -41,12 +48,11 @@ def get_stream_url():
 
 
 class Plugin:
-	chromecasts: typing.Dict[UUID,pychromecast.Chromecast] = dict()
 	cast_browser: pychromecast.CastBrowser = None
+	chromecasts: typing.Dict[UUID,pychromecast.Chromecast] = dict()
 	chromecast: pychromecast.Chromecast = None
-	discovering: bool = False
 
-
+	
 	
 	# Asyncio-compatible long-running code, executed in a task when the plugin is loaded
 	async def _main(self):
@@ -56,7 +62,15 @@ class Plugin:
 	# Function called first during the unload process, utilize this to handle your plugin being removed
 	async def _unload(self):
 		logger.info("Unloading Chromecast Plugin")
-		pass
+		# stop casting and cast discovery
+		try:
+			await self.stop_casting()
+		except:
+			pass
+		try:
+			await self.stop_cast_discovery()
+		except:
+			pass
 	
 	
 	
@@ -97,7 +111,6 @@ class Plugin:
 					zeroconf_instance=zconf,
 					known_hosts=known_hosts)
 			self.cast_browser.start_discovery()
-			self.discovering = True
 		except BaseException as error:
 			logger.error(str(error))
 			raise error
@@ -123,7 +136,6 @@ class Plugin:
 			if self.cast_browser is not None:
 				self.cast_browser.stop_discovery()
 				self.cast_browser = None
-			self.discovering = False
 		except BaseException as error:
 			logger.error(str(error))
 			raise error
@@ -134,6 +146,7 @@ class Plugin:
 	# start casting the desktop stream to the given chromecast
 	async def start_casting(self, device: dict):
 		global port
+		global display
 		logger.info("starting casting to "+device["friendly_name"]+" ("+str(device["uuid"])+")")
 		device: CastInfo = castinfo_fromdict(device)
 		# check if already connected to chromecast
@@ -143,8 +156,8 @@ class Plugin:
 				await self.stop_casting()
 		chromecast = None
 		try:
-			(screen_w, screen_h) = get_screen_resolution()
-			logger.info("screen resolution is "+str(screen_w)+"x"+str(screen_h))
+			(display_w, display_h) = get_display_resolution(display=display)
+			logger.info("display "+display+" resolution is "+str(display_w)+"x"+str(display_h))
 			# get chromecast if needed
 			chromecast = self.chromecast
 			if chromecast is None:
@@ -173,7 +186,7 @@ class Plugin:
 			# start desktop stream server
 			logger.info("starting desktop stream server")
 			if not streamserver.is_started():
-				streamserver.start(resolution=(screen_w, screen_h), port=port)
+				streamserver.start(resolution=(display_w, display_h), display=display, port=port)
 			# play stream on chromecast
 			mc = chromecast.media_controller
 			stream_url = get_stream_url()
@@ -184,7 +197,8 @@ class Plugin:
 				await asyncio.sleep(0.2)
 				if not chromecast.socket_client.is_alive() or self.chromecast is None:
 					# raise RuntimeError("Disconnected from chromecast "+chromecast.cast_info.friendly_name+" while waiting to cast")
-					break
+					return
+			#mc.seek(6)
 		except BaseException as error:
 			logger.error(str(error))
 			if chromecast is not None and not chromecast.socket_client.is_alive() and self.chromecast is chromecast:

@@ -15,9 +15,9 @@ logger = logging.getLogger()
 # -- Flask App
 
 app = Flask(__name__)
-video_dir = tempfile.gettempdir()+"/chromecast_decky_stream"
 ffmpeg_proc: subprocess.Popen = None
-video_resolution: Tuple[int,int] = None
+display_id = ":0"
+display_resolution: Tuple[int,int] = None
 
 '''
 @app.route("/live")
@@ -28,17 +28,19 @@ def live():
 @app.route('/live')
 def stream():
 	global ffmpeg_proc
+	global display_id
+	global video_resolution
 	if ffmpeg_proc is not None:
 		ffmpeg_proc.kill()
 		ffmpeg_proc = None
-	(video_width, video_height) = video_resolution
+	(display_w, display_h) = display_resolution
+	display_res_str = str(display_w)+"x"+str(display_h)
 	ffmpeg_proc = subprocess.Popen(
-		[ "ffmpeg", "-f", "x11grab", "-s", str(video_width)+"x"+str(video_height), "-i", ":0.0",
+		[ "ffmpeg", "-f", "x11grab", "-s", display_res_str, "-i", display_id,
 			"-vcodec", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
 			"-maxrate", "10000k", "-bufsize", "20000k", "-pix_fmt", "yuv420p", "-g", "60",
 			"-f", "mp4", "-max_muxing_queue_size", "9999", "-movflags", "frag_keyframe+empty_moov",
-			"pipe:1"],
-		#env={"DISPLAY": ":0"},
+			"pipe:1" ],
 		stdout=subprocess.PIPE)
 	return Response(ffmpeg_proc.stdout, mimetype="video/mp4")
 
@@ -50,30 +52,27 @@ server: BaseWSGIServer = None
 server_thread: threading.Thread = None
 server_socket_fd: int = None
 
-def start(resolution: Tuple[int,int], host: str = "0.0.0.0", port: int = 8069):
+def start(resolution: Tuple[int,int], display: str, host: str = "0.0.0.0", port: int = 8069):
 	global server
 	global server_thread
 	global server_socket_fd
 	global ffmpeg_proc
-	global video_resolution
-	(screen_w, screen_h) = resolution
+	global display_id
+	global display_resolution
+	(display_w, display_h) = resolution
 	# ensure server isn't already started
 	if server is not None:
 		logger.error("Cannot start StreamServer multiple times")
 		return
 	# ensure resolution is valid
-	if screen_w > 1920:
-		screen_w = 1920
-	if screen_h > 1080:
-		screen_h = 1080
+	if display_w > 1920:
+		display_w = 1920
+	if display_h > 1080:
+		display_h = 1080
 	# kill stream process if running
 	if ffmpeg_proc is not None:
 		ffmpeg_proc.kill()
 		ffmpeg_proc = None
-	# delete and re-create video directory
-	if os.path.exists(video_dir):
-		shutil.rmtree(video_dir)
-	os.mkdir(video_dir)
 	# start server process
 	if server_socket_fd is None:
 		socket = prepare_socket(host, port)
@@ -89,7 +88,8 @@ def start(resolution: Tuple[int,int], host: str = "0.0.0.0", port: int = 8069):
         threaded=True,
         processes=1,
         fd=server_socket_fd)
-	video_resolution = (screen_w, screen_h)
+	display_id = display
+	display_resolution = (display_w, display_h)
 	server_thread = threading.Thread(target=lambda:server.serve_forever())
 	server_thread.start()
 
@@ -110,6 +110,3 @@ def stop():
 	if server_socket_fd is not None:
 		os.close(server_socket_fd)
 		server_socket_fd = None
-	# delete video directory
-	if os.path.exists(video_dir):
-		shutil.rmtree(video_dir)

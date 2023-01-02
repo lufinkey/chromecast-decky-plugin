@@ -47,7 +47,7 @@ def castinfo_fromdict(d: dict):
 		d["cast_type"],
 		d["manufacturer"])
 
-def get_screen_resolution(display: str = ":0") -> Tuple[int, int]:
+def get_display_resolution(display: str) -> Tuple[int, int]:
 	output = os.popen("export DISPLAY=\""+display+"\"; xdpyinfo | awk '/dimensions/{print $2}'").read()
 	dimensions = output.split('x')
 	if len(dimensions) != 2:
