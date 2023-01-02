@@ -34,15 +34,7 @@ def stream():
 	if ffmpeg_proc is not None:
 		ffmpeg_proc.kill()
 		ffmpeg_proc = None
-	(display_w, display_h) = display_resolution
-	display_res_str = str(display_w)+"x"+str(display_h)
-	ffmpeg_proc = subprocess.Popen(
-		[ "ffmpeg", "-f", "x11grab", "-s", display_res_str, "-i", display_id,
-			"-vcodec", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
-			"-maxrate", "10000k", "-bufsize", "20000k", "-pix_fmt", "yuv420p", "-g", "60",
-			"-f", "mp4", "-max_muxing_queue_size", "9999", "-movflags", "frag_keyframe+empty_moov",
-			"pipe:1" ],
-		stdout=subprocess.PIPE)
+	ffmpeg_proc = record_display(display=display_id, resolution=display_resolution)
 	return Response(ffmpeg_proc.stdout, mimetype="video/mp4")
 
 
@@ -53,7 +45,7 @@ server: BaseWSGIServer = None
 server_thread: threading.Thread = None
 server_socket_fd: int = None
 
-def start(resolution: Tuple[int,int], display: str, host: str = "0.0.0.0", port: int = 8069):
+def start(display: str, resolution: Tuple[int,int], host: str = "0.0.0.0", port: int = 8069):
 	global server
 	global server_thread
 	global server_socket_fd
@@ -117,3 +109,22 @@ def stop():
 	if server_socket_fd is not None:
 		os.close(server_socket_fd)
 		server_socket_fd = None
+
+
+
+# FFMPEG
+def record_display(display: str, resolution: Tuple[int,int], output: str = "pipe:1",
+	stdin=None,
+	stdout=subprocess.PIPE,
+	stderr=None):
+	(display_w, display_h) = resolution
+	display_res_str = str(display_w)+"x"+str(display_h)
+	return subprocess.Popen(
+		[ "ffmpeg", "-f", "x11grab", "-s", display_res_str, "-i", display,
+			"-vcodec", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
+			"-maxrate", "10000k", "-bufsize", "20000k", "-pix_fmt", "yuv420p", "-g", "60",
+			"-f", "mp4", "-max_muxing_queue_size", "9999", "-movflags", "frag_keyframe+empty_moov",
+			output ],
+		stdin=stdin,
+		stdout=stdout,
+		stderr=stderr)

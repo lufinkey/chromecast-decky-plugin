@@ -186,7 +186,7 @@ class Plugin:
 			# start desktop stream server
 			logger.info("starting desktop stream server")
 			if not streamserver.is_started():
-				streamserver.start(resolution=(display_w, display_h), display=display, port=port)
+				streamserver.start(display=display, resolution=(display_w, display_h), port=port)
 			# play stream on chromecast
 			mc = chromecast.media_controller
 			stream_url = get_stream_url()
