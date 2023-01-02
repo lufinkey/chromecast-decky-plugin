@@ -3,8 +3,9 @@ import subprocess
 import shutil
 import tempfile
 import logging
-import multiprocessing
+import threading
 from flask import Flask, Response
+from werkzeug.serving import BaseWSGIServer, make_server, prepare_socket
 
 logger = logging.getLogger()
 
@@ -40,13 +41,15 @@ def stream():
 
 # -- Server Process
 
-server_process: multiprocessing.Process = None
+server: BaseWSGIServer = None
+server_thread: threading.Thread = None
 
 def start(host: str = "0.0.0.0", port: int = 8069):
-	global server_process
+	global server
+	global server_thread
 	global ffmpeg_proc
 	# ensure server isn't already started
-	if server_process is not None:
+	if server is not None:
 		logger.error("Cannot start StreamServer multiple times")
 		return
 	# kill stream process if running
@@ -58,21 +61,35 @@ def start(host: str = "0.0.0.0", port: int = 8069):
 		shutil.rmtree(video_dir)
 	os.mkdir(video_dir)
 	# start server process
-	server_process = multiprocessing.Process(target=lambda:app.run(host=host, port=port))
-	server_process.start()
+	socket = prepare_socket(host, port)
+	fd = socket.fileno()
+	# Silence a ResourceWarning about an unclosed socket. This object is no longer
+	# used, the server will create another with fromfd.
+	socket.detach()
+	os.environ["WERKZEUG_SERVER_FD"] = str(fd)
+	server = make_server(
+        host,
+        port,
+        app,
+        threaded=True,
+        processes=1,
+        fd=fd)
+	server_thread = threading.Thread(target=lambda:server.serve_forever())
+	server_thread.start()
 
 def is_started() -> bool:
-	return server_process is not None
+	return server_thread is not None
 
 def stop():
-	global server_process
-	if server_process is not None:
-		server_process.terminate()
-		server_process.join()
-		server_process = None
-	if ffmpeg_proc is not None:
-		ffmpeg_proc.kill()
-		ffmpeg_proc = None
+	global server
+	global server_thread
+	global ffmpeg_proc
+	if server is not None:
+		server.shutdown()
+	if server_thread is not None:
+		server_thread.join(timeout=6.0)
+		server_thread = None
+		server = None
 	# delete video directory
 	if os.path.exists(video_dir):
 		shutil.rmtree(video_dir)

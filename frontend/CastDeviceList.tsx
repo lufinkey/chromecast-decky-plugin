@@ -1,5 +1,11 @@
 import { Component } from 'react';
-import { PanelSection, PanelSectionRow } from 'decky-frontend-lib';
+import {
+	PanelSection,
+	PanelSectionRow,
+	Button,
+	ButtonItem
+} from 'decky-frontend-lib';
+import { FaBan } from 'react-icons/fa';
 import { PluginBackend, CastDevice } from './PluginBackend';
 
 interface Props {
@@ -117,17 +123,57 @@ export class CastDeviceList extends Component<Props, State> {
 		console.log("stopping poll for chromecast updates");
 	}
 
+	async selectCastDevice(device: CastDevice) {
+		try {
+			await this.props.backend.startCasting(device);
+		} catch(error) {
+			console.error(error);
+			if(this.mounted) {
+				this.setState({ error });
+			}
+		}
+	}
+
+	async disconnectCastDevice(device: CastDevice) {
+		try {
+			await this.props.backend.stopCasting();
+		} catch(error) {
+			console.error(error);
+			if(this.mounted) {
+				this.setState({ error });
+			}
+		}
+	}
+
 	render() {
+		const state = this.state;
+		let devices = state.devices;
+		const castingDevice = state.castingDevice;
+		if(castingDevice != null && devices.findIndex((cmpDev) => (cmpDev.uuid == castingDevice.uuid)) == -1) {
+			devices = [castingDevice].concat(devices);
+		}
 		return (
 			<div>
-				{this.state.error != null ?
-					<div>{this.state.error.message}</div>
+				{state.error != null ?
+					<div>{state.error.message}</div>
 				: null}
-				<PanelSection title={`Cast Devices (${this.state.devices.length})`}>
-					{this.state.devices.map((device) => (
-						<PanelSectionRow>
-							{device.friendly_name}
-						</PanelSectionRow>
+				<PanelSection title={`Cast Devices (${devices.length})`}>
+					{devices.map((device) => (
+						(castingDevice != null && castingDevice.uuid == device.uuid) ? (
+							<PanelSectionRow>
+								<div>{device.friendly_name}</div>
+								<Button onClick={() => this.disconnectCastDevice(device)}><FaBan/></Button>
+							</PanelSectionRow>
+						) : (
+							<ButtonItem
+								layout='below'
+								bottomSeparator={'standard'}
+								onClick={() => this.selectCastDevice(device)}>
+								<div>
+									{device.friendly_name}
+								</div>
+							</ButtonItem>
+						)
 					))}
 				</PanelSection>
 			</div>

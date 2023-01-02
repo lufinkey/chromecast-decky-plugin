@@ -16,6 +16,7 @@ async def test_plugin(plugin: Plugin):
 	for device in devices:
 		print("device "+str(device))
 	
+	'''
 	print("stopping cast discovery")
 	await plugin.stop_cast_discovery()
 	print("stopped cast discovery")
@@ -30,5 +31,16 @@ async def test_plugin(plugin: Plugin):
 	print("got "+str(len(devices))+" devices")
 	for device in devices:
 		print("device "+str(device))
+	'''
+	
+	device = None
+	for cmpDevice in devices:
+		if cmpDevice["friendly_name"] == "Luis's Alt Bedroom TV":
+			device = cmpDevice
+			break
+	print("Connecting to "+device["friendly_name"])
+	await plugin.start_casting(device)
+
+	await asyncio.sleep(20)
 	
 asyncio.run(test_plugin(plugin))
