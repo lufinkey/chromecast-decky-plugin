@@ -120,14 +120,14 @@ def record_display(display: str, resolution: Tuple[int,int], duration: str = Non
 	(display_w, display_h) = resolution
 	display_res_str = str(display_w)+"x"+str(display_h)
 	# assemble ffmpeg args
-	ffmpeg_args = [ "ffmpeg", "-f", "x11grab", "-s", display_res_str, "-i", display ]
+	ffmpeg_args = [ "ffmpeg", "-f", "x11grab", "-s", display_res_str, "-i", display, "-f", "pulse", "-ac", "2", "-i", "0" ]
 	if duration is not None:
 		ffmpeg_args.extend(["-t", duration])
 	ffmpeg_args.extend([
 		"-vcodec", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
-			"-maxrate", "10000k", "-bufsize", "20000k", "-pix_fmt", "yuv420p", "-g", "60",
-			"-f", "mp4", "-max_muxing_queue_size", "9999", "-movflags", "frag_keyframe+empty_moov",
-			output ])
+		"-maxrate", "10000k", "-bufsize", "20000k", "-vf", "format=pix_fmts=yuv420p", "-g", "60",
+		"-f", "mp4", "-max_muxing_queue_size", "9999", "-movflags", "frag_keyframe+empty_moov",
+		output ])
 	# call command
 	return subprocess.Popen(
 		ffmpeg_args,
