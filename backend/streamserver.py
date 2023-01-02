@@ -9,6 +9,8 @@ from typing import Tuple
 from flask import Flask, Response
 from werkzeug.serving import BaseWSGIServer, make_server, prepare_socket
 
+from utils import get_user_uid
+
 logger = logging.getLogger()
 
 
@@ -105,16 +107,23 @@ def stop():
 	global server
 	global server_thread
 	global server_socket_fd
-	global ffmpeg_proc
+	global serving_ffmpeg_proc
+	# set server shutdown
 	if server is not None:
 		server.shutdown()
+	# wait for server thread to end
 	if server_thread is not None:
 		server_thread.join()
 		server_thread = None
 		server = None
+	# close server socket
 	if server_socket_fd is not None:
 		os.close(server_socket_fd)
 		server_socket_fd = None
+	# end ffmpeg process
+	if serving_ffmpeg_proc is not None:
+		serving_ffmpeg_proc.kill()
+		serving_ffmpeg_proc = None
 
 
 
@@ -124,9 +133,9 @@ def record_display(display: str, resolution: Tuple[int,int], audio_device_index:
 	stdin=None,
 	stdout=subprocess.PIPE,
 	stderr=None):
+	# assemble ffmpeg args
 	(display_w, display_h) = resolution
 	display_res_str = str(display_w)+"x"+str(display_h)
-	# assemble ffmpeg args
 	ffmpeg_args = [ "ffmpeg", "-f", "x11grab", "-s", display_res_str, "-i", display, "-f", "pulse", "-ac", "2", "-i", str(audio_device_index) ]
 	if duration is not None:
 		ffmpeg_args.extend(["-t", duration])
@@ -135,14 +144,18 @@ def record_display(display: str, resolution: Tuple[int,int], audio_device_index:
 		"-maxrate", "10000k", "-bufsize", "20000k", "-vf", "format=pix_fmts=yuv420p", "-g", "60",
 		"-f", "mp4", "-max_muxing_queue_size", "9999", "-movflags", "frag_keyframe+empty_moov",
 		output ])
+	# add optional env vars
+	envvars = os.environ.copy()
+	if "XDG_RUNTIME_DIR" not in envvars:
+		# get deck user UID for XDG_RUNTIME_DIR variable
+		deck_uid = get_user_uid("deck")
+		if deck_uid is None:
+			deck_uid = 1000
+		envvars["XDG_RUNTIME_DIR"] = "/run/user/"+deck_uid
 	# call command
 	return subprocess.Popen(
 		ffmpeg_args,
-		env={
-			"HOME": "/home/deck",
-			"LOGNAME": "deck",
-			"USER": "deck"
-		},
+		env=envvars,
 		stdin=stdin,
 		stdout=stdout,
 		stderr=stderr)
