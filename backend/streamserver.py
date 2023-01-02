@@ -138,6 +138,11 @@ def record_display(display: str, resolution: Tuple[int,int], audio_device_index:
 	# call command
 	return subprocess.Popen(
 		ffmpeg_args,
+		env={
+			"HOME": "/home/deck",
+			"LOGNAME": "deck",
+			"USER": "deck"
+		},
 		stdin=stdin,
 		stdout=stdout,
 		stderr=stderr)

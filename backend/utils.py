@@ -50,7 +50,7 @@ def castinfo_fromdict(d: dict):
 
 
 def get_default_audio_sink_index() -> int:
-	output = os.popen("pactl list sinks short").read()
+	output = os.popen("export HOME='/home/deck'; export LOGNAME=deck; export USER=deck; pactl list sinks short").read()
 	output_words = output.split()
 	if len(output_words) == 0:
 		raise RuntimeError("Couldn't determine default sink from output "+output)
