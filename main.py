@@ -200,10 +200,9 @@ class Plugin:
 	async def stop_casting(self):
 		chromecast = self.chromecast
 		if chromecast is not None:
-			logger.info("stopping cast to "+chromecast.uuid)
+			logger.info("stopping cast to "+str(chromecast.uuid))
 		else:
 			logger.info("stopping cast")
-		errors = []
 		# stop stream server
 		try:
 			streamserver.stop()
