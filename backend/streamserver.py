@@ -95,7 +95,7 @@ def start(resolution: Tuple[int,int], display: str, host: str = "0.0.0.0", port:
 	server_thread.start()
 
 def run_server(server: BaseWSGIServer):
-	logger.info("starting server thread listening on "+server.host+":"+server.port)
+	logger.info("starting server thread listening on "+server.host+":"+str(server.port))
 	server.serve_forever()
 	logger.info("server thread ended")
 
