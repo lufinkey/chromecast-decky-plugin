@@ -8,8 +8,8 @@ plugin = Plugin()
 async def test_plugin(plugin: Plugin):
 	print("starting cast discovery")
 	await plugin.start_cast_discovery()
-	await asyncio.sleep(1)
-
+	await asyncio.sleep(3)
+	
 	print("getting cast devices")
 	devices = await plugin.get_cast_devices()
 	print("got "+str(len(devices))+" devices")

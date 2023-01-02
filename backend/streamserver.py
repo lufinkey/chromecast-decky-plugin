@@ -29,7 +29,8 @@ def live():
 def stream():
 	global ffmpeg_proc
 	global display_id
-	global video_resolution
+	global display_resolution
+	logger.info("Got request to /live endpoint")
 	if ffmpeg_proc is not None:
 		ffmpeg_proc.kill()
 		ffmpeg_proc = None
@@ -90,8 +91,14 @@ def start(resolution: Tuple[int,int], display: str, host: str = "0.0.0.0", port:
         fd=server_socket_fd)
 	display_id = display
 	display_resolution = (display_w, display_h)
-	server_thread = threading.Thread(target=lambda:server.serve_forever())
+	server_thread = threading.Thread(target=lambda:run_server(server))
 	server_thread.start()
+
+def run_server(server: BaseWSGIServer):
+	logger.info("starting server thread listening on "+server.host+":"+server.port)
+	server.serve_forever()
+	logger.info("server thread ended")
+
 
 def is_started() -> bool:
 	return server_thread is not None
