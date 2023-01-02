@@ -4,6 +4,7 @@ import shutil
 import tempfile
 import logging
 import threading
+import socket
 from flask import Flask, Response
 from werkzeug.serving import BaseWSGIServer, make_server, prepare_socket
 
@@ -43,10 +44,12 @@ def stream():
 
 server: BaseWSGIServer = None
 server_thread: threading.Thread = None
+server_socket_fd: int = None
 
 def start(host: str = "0.0.0.0", port: int = 8069):
 	global server
 	global server_thread
+	global server_socket_fd
 	global ffmpeg_proc
 	# ensure server isn't already started
 	if server is not None:
@@ -61,19 +64,20 @@ def start(host: str = "0.0.0.0", port: int = 8069):
 		shutil.rmtree(video_dir)
 	os.mkdir(video_dir)
 	# start server process
-	socket = prepare_socket(host, port)
-	fd = socket.fileno()
-	# Silence a ResourceWarning about an unclosed socket. This object is no longer
-	# used, the server will create another with fromfd.
-	socket.detach()
-	os.environ["WERKZEUG_SERVER_FD"] = str(fd)
+	if server_socket_fd is None:
+		socket = prepare_socket(host, port)
+		server_socket_fd = socket.fileno()
+		# Silence a ResourceWarning about an unclosed socket. This object is no longer
+		# used, the server will create another with fromfd.
+		socket.detach()
+	os.environ["WERKZEUG_SERVER_FD"] = str(server_socket_fd)
 	server = make_server(
         host,
         port,
         app,
         threaded=True,
         processes=1,
-        fd=fd)
+        fd=server_socket_fd)
 	server_thread = threading.Thread(target=lambda:server.serve_forever())
 	server_thread.start()
 
@@ -83,13 +87,17 @@ def is_started() -> bool:
 def stop():
 	global server
 	global server_thread
+	global server_socket_fd
 	global ffmpeg_proc
 	if server is not None:
 		server.shutdown()
 	if server_thread is not None:
-		server_thread.join(timeout=6.0)
+		server_thread.join()
 		server_thread = None
 		server = None
+	if server_socket_fd is not None:
+		os.close(server_socket_fd)
+		server_socket_fd = None
 	# delete video directory
 	if os.path.exists(video_dir):
 		shutil.rmtree(video_dir)
