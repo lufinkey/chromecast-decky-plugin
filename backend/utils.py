@@ -47,6 +47,15 @@ def castinfo_fromdict(d: dict):
 		d["cast_type"],
 		d["manufacturer"])
 
+
+
+def get_default_audio_sink_index() -> int:
+	output = os.popen("pactl list sinks short").read()
+	output_words = output.split()
+	if len(output_words) == 0:
+		raise RuntimeError("Couldn't determine default sink from output "+output)
+	return int(output_words[0])
+
 def get_display_resolution(display: str) -> Tuple[int, int]:
 	output = os.popen("export DISPLAY=\""+display+"\"; xdpyinfo | awk '/dimensions/{print $2}'").read()
 	dimensions = output.split('x')

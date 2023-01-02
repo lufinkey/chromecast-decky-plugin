@@ -15,9 +15,10 @@ logger = logging.getLogger()
 # -- Flask App
 
 app = Flask(__name__)
-ffmpeg_proc: subprocess.Popen = None
-display_id = ":0"
-display_resolution: Tuple[int,int] = None
+serving_ffmpeg_proc: subprocess.Popen = None
+serving_display_id: str = ":0"
+serving_display_resolution: Tuple[int,int] = None
+serving_audio_device_index: int = 0
 
 '''
 @app.route("/live")
@@ -27,15 +28,18 @@ def live():
 
 @app.route('/live')
 def stream():
-	global ffmpeg_proc
-	global display_id
-	global display_resolution
+	global serving_ffmpeg_proc
+	global serving_display_id
+	global serving_display_resolution
 	logger.info("Got request to /live endpoint")
-	if ffmpeg_proc is not None:
-		ffmpeg_proc.kill()
-		ffmpeg_proc = None
-	ffmpeg_proc = record_display(display=display_id, resolution=display_resolution)
-	return Response(ffmpeg_proc.stdout, mimetype="video/mp4")
+	if serving_ffmpeg_proc is not None:
+		serving_ffmpeg_proc.kill()
+		serving_ffmpeg_proc = None
+	serving_ffmpeg_proc = record_display(
+		display = serving_display_id,
+		resolution = serving_display_resolution,
+		audio_device_index = serving_audio_device_index)
+	return Response(serving_ffmpeg_proc.stdout, mimetype="video/mp4")
 
 
 
@@ -45,13 +49,14 @@ server: BaseWSGIServer = None
 server_thread: threading.Thread = None
 server_socket_fd: int = None
 
-def start(display: str, resolution: Tuple[int,int], host: str = "0.0.0.0", port: int = 8069):
+def start(display: str, resolution: Tuple[int,int], audio_device_index: int = 0, host: str = "0.0.0.0", port: int = 8069):
 	global server
 	global server_thread
 	global server_socket_fd
-	global ffmpeg_proc
-	global display_id
-	global display_resolution
+	global serving_ffmpeg_proc
+	global serving_display_id
+	global serving_display_resolution
+	global serving_audio_device_index
 	(display_w, display_h) = resolution
 	# ensure server isn't already started
 	if server is not None:
@@ -63,9 +68,9 @@ def start(display: str, resolution: Tuple[int,int], host: str = "0.0.0.0", port:
 	if display_h > 1080:
 		display_h = 1080
 	# kill stream process if running
-	if ffmpeg_proc is not None:
-		ffmpeg_proc.kill()
-		ffmpeg_proc = None
+	if serving_ffmpeg_proc is not None:
+		serving_ffmpeg_proc.kill()
+		serving_ffmpeg_proc = None
 	# start server process
 	if server_socket_fd is None:
 		socket = prepare_socket(host, port)
@@ -81,8 +86,9 @@ def start(display: str, resolution: Tuple[int,int], host: str = "0.0.0.0", port:
         threaded=True,
         processes=1,
         fd=server_socket_fd)
-	display_id = display
-	display_resolution = (display_w, display_h)
+	serving_display_id = display
+	serving_display_resolution = (display_w, display_h)
+	serving_audio_device_index = audio_device_index
 	server_thread = threading.Thread(target=lambda:run_server(server))
 	server_thread.start()
 
@@ -112,15 +118,16 @@ def stop():
 
 
 
-# FFMPEG
-def record_display(display: str, resolution: Tuple[int,int], duration: str = None, output: str = "pipe:1",
+# -- FFMPEG
+
+def record_display(display: str, resolution: Tuple[int,int], audio_device_index: int = 0, duration: str = None, output: str = "pipe:1",
 	stdin=None,
 	stdout=subprocess.PIPE,
 	stderr=None):
 	(display_w, display_h) = resolution
 	display_res_str = str(display_w)+"x"+str(display_h)
 	# assemble ffmpeg args
-	ffmpeg_args = [ "ffmpeg", "-f", "x11grab", "-s", display_res_str, "-i", display, "-f", "pulse", "-ac", "2", "-i", "0" ]
+	ffmpeg_args = [ "ffmpeg", "-f", "x11grab", "-s", display_res_str, "-i", display, "-f", "pulse", "-ac", "2", "-i", str(audio_device_index) ]
 	if duration is not None:
 		ffmpeg_args.extend(["-t", duration])
 	ffmpeg_args.extend([

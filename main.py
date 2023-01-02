@@ -15,7 +15,7 @@ from pychromecast import CastBrowser, CastInfo, SimpleCastListener
 
 sys.path.append(PLUGIN_DIR+"/backend")
 import streamserver
-from utils import castinfo_fromdict, castinfo_todict, get_display_resolution
+from utils import castinfo_fromdict, castinfo_todict, get_default_audio_sink_index, get_display_resolution
 
 # get plugin directory
 PLUGIN_DIR = str(pathlib.Path(__file__).parent.resolve())
@@ -159,6 +159,9 @@ class Plugin:
 				await self.stop_casting()
 		chromecast = None
 		try:
+			# get audio source
+			audio_device_index = get_default_audio_sink_index()
+			# get display resolution
 			(display_w, display_h) = get_display_resolution(display=display)
 			logger.info("display "+display+" resolution is "+str(display_w)+"x"+str(display_h))
 			# get chromecast if needed
@@ -189,7 +192,11 @@ class Plugin:
 			# start desktop stream server
 			logger.info("starting desktop stream server")
 			if not streamserver.is_started():
-				streamserver.start(display=display, resolution=(display_w, display_h), port=port)
+				streamserver.start(
+					display=display,
+					resolution=(display_w, display_h),
+					audio_device_index=audio_device_index,
+					port=port)
 			# play stream on chromecast
 			mc = chromecast.media_controller
 			stream_url = get_stream_url()
