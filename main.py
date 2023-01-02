@@ -33,6 +33,9 @@ logger.info("Loading Chromecast Plugin")
 display: str = os.getenv("DISPLAY")
 if display is None:
 	display = ":1"
+	logger.info("falling back to display "+display)
+else:
+	logger.info("using display "+str(display))
 port: int = 8069
 
 
