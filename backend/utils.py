@@ -7,18 +7,18 @@ from pychromecast import CastInfo, ServiceInfo
 from uuid import UUID
 
 
-def serviceinfo_todict(service_info: ServiceInfo):
+def serviceinfo_todict(service_info: ServiceInfo) -> dict:
 	return {
 		"type": service_info.type,
 		"data": service_info.data
 	}
 
-def serviceinfo_fromdict(d: dict):
+def serviceinfo_fromdict(d: dict) -> ServiceInfo:
 	return ServiceInfo(
 		d["type"],
 		d["data"])
 
-def castinfo_todict(cast_info: CastInfo):
+def castinfo_todict(cast_info: CastInfo) -> dict:
 	services = list()
 	for service in cast_info.services:
 		services.append(serviceinfo_todict(service))
@@ -33,7 +33,7 @@ def castinfo_todict(cast_info: CastInfo):
 		"manufacturer": cast_info.manufacturer
 	}
 
-def castinfo_fromdict(d: dict):
+def castinfo_fromdict(d: dict) -> CastInfo:
 	services = set()
 	for service in d["services"]:
 		services.add(serviceinfo_fromdict(service))
@@ -55,9 +55,9 @@ def get_default_audio_sink_index() -> int:
 	if "XDG_RUNTIME_DIR" not in os.environ:
 		# get deck user UID for XDG_RUNTIME_DIR variable
 		deck_uid = get_user_uid("deck")
-		if deck_uid is None:
-			deck_uid = 1000
-		pactl_cmd = "export XDG_RUNTIME_DIR='/run/user/{deck_uid}'; ".format(deck_uid=deck_uid)+pactl_cmd
+		if deck_uid is not None:
+			pactl_cmd = "export XDG_RUNTIME_DIR='/run/user/{deck_uid}'; ".format(deck_uid=deck_uid)+pactl_cmd
+	pactl_cmd = 'sudo runuser -l deck -c "sh -c \\"'+pactl_cmd+'\\""'
 	# call pactl command
 	output = os.popen(pactl_cmd).read()
 	# parse output
@@ -67,7 +67,7 @@ def get_default_audio_sink_index() -> int:
 	return int(output_words[0])
 
 def get_display_resolution(display: str) -> Tuple[int, int]:
-	output = os.popen("export DISPLAY=\""+display+"\"; xdpyinfo | awk '/dimensions/{print $2}'").read()
+	output = os.popen("export DISPLAY='"+display+"'; xdpyinfo | awk '/dimensions/{print $2}'").read()
 	dimensions = output.split('x')
 	if len(dimensions) != 2:
 		raise RuntimeError("Couldn't determine screen resolution from output "+output)

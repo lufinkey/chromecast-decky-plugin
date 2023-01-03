@@ -1,7 +1,7 @@
 {
 	"name": "Chromecast",
 	"author": "Luis Finke",
-	"flags": [],
+	"flags": ["root"],
 	"publish": {
 		"tags": ["chromecast", "cast", "screen", "mirror"],
 		"description": "Cast your screen to a chromecast receiver",

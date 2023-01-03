@@ -5,7 +5,7 @@ import tempfile
 import logging
 import threading
 import socket
-from typing import Tuple
+from typing import Tuple, List
 from flask import Flask, Response
 from werkzeug.serving import BaseWSGIServer, make_server, prepare_socket
 
@@ -17,10 +17,8 @@ logger = logging.getLogger()
 # -- Flask App
 
 app = Flask(__name__)
-serving_ffmpeg_proc: subprocess.Popen = None
-serving_display_id: str = ":0"
-serving_display_resolution: Tuple[int,int] = None
-serving_audio_device_index: int = 0
+serving_ffmpeg_procs: List[subprocess.Popen] = []
+serving_audio_device_index: int = None
 
 '''
 @app.route("/live")
@@ -30,18 +28,16 @@ def live():
 
 @app.route('/live')
 def stream():
-	global serving_ffmpeg_proc
-	global serving_display_id
-	global serving_display_resolution
+	global serving_ffmpeg_procs
+	global serving_audio_device_index
 	logger.info("Got request to /live endpoint")
-	if serving_ffmpeg_proc is not None:
-		serving_ffmpeg_proc.kill()
-		serving_ffmpeg_proc = None
-	serving_ffmpeg_proc = record_display(
-		display = serving_display_id,
-		resolution = serving_display_resolution,
-		audio_device_index = serving_audio_device_index)
-	return Response(serving_ffmpeg_proc.stdout, mimetype="video/mp4")
+	# kill previous ffmpeg processes
+	for ffmpeg_proc in serving_ffmpeg_procs:
+		ffmpeg_proc.kill()
+	serving_ffmpeg_procs = []
+	# start new ffmpeg process
+	serving_ffmpeg_procs = record_display(audio_device_index=serving_audio_device_index)
+	return Response(serving_ffmpeg_procs[0].stdout, mimetype="video/mp4")
 
 
 
@@ -51,29 +47,20 @@ server: BaseWSGIServer = None
 server_thread: threading.Thread = None
 server_socket_fd: int = None
 
-def start(display: str, resolution: Tuple[int,int], audio_device_index: int = 0, host: str = "0.0.0.0", port: int = 8069):
+def start(host: str = "0.0.0.0", port: int = 8069, audio_device_index: int = None):
 	global server
 	global server_thread
 	global server_socket_fd
-	global serving_ffmpeg_proc
-	global serving_display_id
-	global serving_display_resolution
-	global serving_audio_device_index
-	(display_w, display_h) = resolution
+	global serving_ffmpeg_procs
 	# ensure server isn't already started
 	if server is not None:
 		logger.error("Cannot start StreamServer multiple times")
 		return
-	# ensure resolution is valid
-	if display_w > 1920:
-		display_w = 1920
-	if display_h > 1080:
-		display_h = 1080
-	# kill stream process if running
-	if serving_ffmpeg_proc is not None:
-		serving_ffmpeg_proc.kill()
-		serving_ffmpeg_proc = None
-	# start server process
+	# kill stream processes if running
+	for ffmpeg_proc in serving_ffmpeg_procs:
+		ffmpeg_proc.kill()
+	serving_ffmpeg_procs = []
+	# start server process if needed
 	if server_socket_fd is None:
 		socket = prepare_socket(host, port)
 		server_socket_fd = socket.fileno()
@@ -88,9 +75,6 @@ def start(display: str, resolution: Tuple[int,int], audio_device_index: int = 0,
         threaded=True,
         processes=1,
         fd=server_socket_fd)
-	serving_display_id = display
-	serving_display_resolution = (display_w, display_h)
-	serving_audio_device_index = audio_device_index
 	server_thread = threading.Thread(target=lambda:run_server(server))
 	server_thread.start()
 
@@ -107,7 +91,7 @@ def stop():
 	global server
 	global server_thread
 	global server_socket_fd
-	global serving_ffmpeg_proc
+	global serving_ffmpeg_procs
 	# set server shutdown
 	if server is not None:
 		server.shutdown()
@@ -121,41 +105,58 @@ def stop():
 		os.close(server_socket_fd)
 		server_socket_fd = None
 	# end ffmpeg process
-	if serving_ffmpeg_proc is not None:
-		serving_ffmpeg_proc.kill()
-		serving_ffmpeg_proc = None
+	for ffmpeg_proc in serving_ffmpeg_procs:
+		ffmpeg_proc.kill()
+	serving_ffmpeg_procs = []
 
 
 
 # -- FFMPEG
 
-def record_display(display: str, resolution: Tuple[int,int], audio_device_index: int = 0, duration: str = None, output: str = "pipe:1",
+def record_display(audio_device_index: int = None, output: str = "pipe:1",
 	stdin=None,
 	stdout=subprocess.PIPE,
-	stderr=None):
-	# assemble ffmpeg args
-	(display_w, display_h) = resolution
-	display_res_str = str(display_w)+"x"+str(display_h)
-	ffmpeg_args = [ "ffmpeg", "-f", "x11grab", "-s", display_res_str, "-i", display, "-f", "pulse", "-ac", "2", "-i", str(audio_device_index) ]
-	if duration is not None:
-		ffmpeg_args.extend(["-t", duration])
-	ffmpeg_args.extend([
-		"-vcodec", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
-		"-maxrate", "10000k", "-bufsize", "20000k", "-vf", "format=pix_fmts=yuv420p", "-g", "60",
-		"-f", "mp4", "-max_muxing_queue_size", "9999", "-movflags", "frag_keyframe+empty_moov",
-		output ])
-	# add optional env vars
-	envvars = os.environ.copy()
-	if "XDG_RUNTIME_DIR" not in envvars:
+	stderr=None) -> List[subprocess.Popen]:
+	# get screen capture ffmpeg process args (outputs to stdout as mpegts format)
+	# ffmpeg_args = "ffmpeg -thread_queue_size 512 -framerate 60 -device /dev/dri/card0 -f kmsgrab -i - -vaapi_device /dev/dri/renderD128 -vf hwmap=derive_device=vaapi,scale_vaapi=format=nv12 -c:v h264_vaapi -bf 1 -f mpegts".split(' ')
+	# ffmpeg_args = "ffmpeg -thread_queue_size 512 -framerate 60 -device /dev/dri/card0 -f kmsgrab -i - -vaapi_device /dev/dri/renderD128 -preset ultrafast -tune zerolatency -maxrate 10000k -bufsize 20000k -pix_fmt yuv420p -g 60 -f mp4 -max_muxing_queue_size 9999 -movflags frag_keyframe+empty_moov".split(' ')
+	# ffmpeg_args = "ffmpeg -device /dev/dri/card0 -f kmsgrab -i - -vf hwmap=derive_device=vaapi,scale_vaapi=format=nv12 -c:v h264_vaapi -qp 24 -f mp4 -max_muxing_queue_size 9999 -movflags frag_keyframe+empty_moov".split(' ')
+	screen_ffmpeg_args = "ffmpeg -thread_queue_size 512 -framerate 60 -device /dev/dri/card0 -f kmsgrab -i - -vaapi_device /dev/dri/renderD128 -vf hwmap=derive_device=vaapi,scale_vaapi=format=nv12 -vcodec h264_vaapi -bf 1 -f mpegts pipe:".split(' ')
+	screen_envvars = os.environ.copy()
+	screen_envvars["LD_PRELOAD"] = ""
+	screen_envvars["QT_QPA_PLATFORM"] = "xcb"
+	# get conversion ffmpeg process args (attach audio input if provided)
+	ffmpeg_screen_pipe_args_str = "-f mpegts -i pipe:"
+	ffmpeg_output_format_args_str = "-vcodec libx264 -preset ultrafast -tune zerolatency -maxrate 10000k -bufsize 20000k -vf format=pix_fmts=yuv420p -g 60 -f mp4 -max_muxing_queue_size 9999 -movflags frag_keyframe+empty_moov"
+	if audio_device_index is not None:
+		# attach audio to output process args from provided device index
 		# get deck user UID for XDG_RUNTIME_DIR variable
 		deck_uid = get_user_uid("deck")
 		if deck_uid is None:
 			deck_uid = 1000
-		envvars["XDG_RUNTIME_DIR"] = "/run/user/"+deck_uid
-	# call command
-	return subprocess.Popen(
-		ffmpeg_args,
-		env=envvars,
+		output_ffmpeg_cmd_str = (
+			"export XDG_RUNTIME_DIR=/run/user/{uid}; ".format(uid=deck_uid)
+			+ "ffmpeg "+ffmpeg_screen_pipe_args_str
+			+ " -f pulse -ac 2 -i {adi} ".format(adi=audio_device_index)
+			+ ffmpeg_output_format_args_str
+			+ " " + output )
+		output_ffmpeg_args = [ "runuser", "-l", "deck", "-c", output_ffmpeg_cmd_str ]
+	else:
+		# create output process args
+		output_ffmpeg_args = [ 'ffmpeg' ]
+		output_ffmpeg_args.extend(ffmpeg_screen_pipe_args_str.split(' '))
+		output_ffmpeg_args.extend(ffmpeg_output_format_args_str.split(' '))
+		output_ffmpeg_args.append(output)
+	# start processes
+	screen_proc = subprocess.Popen(
+		screen_ffmpeg_args,
+		env=screen_envvars,
 		stdin=stdin,
+		stdout=subprocess.PIPE,
+		stderr=stderr)
+	output_proc = subprocess.Popen(
+		output_ffmpeg_args,
+		stdin=screen_proc.stdout,
 		stdout=stdout,
 		stderr=stderr)
+	return [output_proc, screen_proc]

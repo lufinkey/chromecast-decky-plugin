@@ -151,7 +151,11 @@ class Plugin:
 		global port
 		global display
 		logger.info("starting casting to "+device["friendly_name"]+" ("+str(device["uuid"])+")")
-		device: CastInfo = castinfo_fromdict(device)
+		try:
+			device: CastInfo = castinfo_fromdict(device)
+		except BaseException as error:
+			logger.error(str(error))
+			raise error
 		# check if already connected to chromecast
 		if self.chromecast is not None:
 			if self.chromecast.uuid != device.uuid:
@@ -159,11 +163,6 @@ class Plugin:
 				await self.stop_casting()
 		chromecast = None
 		try:
-			# get audio source
-			audio_device_index = get_default_audio_sink_index()
-			# get display resolution
-			(display_w, display_h) = get_display_resolution(display=display)
-			logger.info("display "+display+" resolution is "+str(display_w)+"x"+str(display_h))
 			# get chromecast if needed
 			chromecast = self.chromecast
 			if chromecast is None:
@@ -192,11 +191,7 @@ class Plugin:
 			# start desktop stream server
 			logger.info("starting desktop stream server")
 			if not streamserver.is_started():
-				streamserver.start(
-					display=display,
-					resolution=(display_w, display_h),
-					audio_device_index=audio_device_index,
-					port=port)
+				streamserver.start(port=port)
 			# play stream on chromecast
 			mc = chromecast.media_controller
 			stream_url = get_stream_url()
