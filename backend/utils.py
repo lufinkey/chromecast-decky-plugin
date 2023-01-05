@@ -6,6 +6,7 @@ import asyncio
 from pychromecast import CastInfo, ServiceInfo
 from uuid import UUID
 
+PLUGIN_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 def serviceinfo_todict(service_info: ServiceInfo) -> dict:
 	return {
@@ -79,3 +80,10 @@ def get_user_uid(user: str):
 	if len(user_id) == 0:
 		user_id = None
 	return user_id
+
+def record_display() -> subprocess.Popen:
+	global PLUGIN_DIR
+	# start processes
+	return subprocess.Popen(
+		[ PLUGIN_DIR+"/capture_screen.sh" ],
+		stdout=subprocess.PIPE)

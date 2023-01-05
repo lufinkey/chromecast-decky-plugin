@@ -210,7 +210,7 @@ class Plugin:
 				self.chromecast = None
 			raise error
 		logger.info("casted to device")
-
+	
 	# get the device that is currently being casted to
 	async def get_casting_device(self) -> dict:
 		if self.chromecast is None:
