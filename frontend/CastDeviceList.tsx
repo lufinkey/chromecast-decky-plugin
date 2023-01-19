@@ -163,6 +163,7 @@ export class CastDeviceList extends Component<Props, State> {
 							</PanelSectionRow>
 						) : (
 							<ButtonItem
+								description={`${device.model_name} | ${device.host}:${device.port}`}
 								layout='below'
 								bottomSeparator={'standard'}
 								onClick={() => this.selectCastDevice(device)}>
