@@ -183,7 +183,7 @@ class Plugin:
 			if not chromecast.socket_client.is_alive():
 				chromecast.socket_client.start()
 			while not chromecast.status_event.is_set():
-				await asyncio.sleep(0.2)
+				await asyncio.sleep(0.1)
 				if not chromecast.socket_client.is_alive():
 					if self.chromecast is chromecast:
 						self.chromecast = None
@@ -199,10 +199,15 @@ class Plugin:
 			mc.play_media(stream_url, content_type="video/mp4", stream_type="LIVE")
 			# wait until session is active
 			while not mc.session_active_event.is_set():
-				await asyncio.sleep(0.2)
+				await asyncio.sleep(0.1)
 				if not chromecast.socket_client.is_alive() or self.chromecast is None:
 					# raise RuntimeError("Disconnected from chromecast "+chromecast.cast_info.friendly_name+" while waiting to cast")
 					return
+			for i in range(3):
+				await asyncio.sleep(0.1)
+				if mc.status.player_is_playing:
+					break
+				mc.play()
 			#mc.seek(6)
 		except BaseException as error:
 			logger.error(str(error))
